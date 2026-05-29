@@ -11,4 +11,4 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 var TICKET_API_URL = "https://nbjbievinjirlbyjodcm.supabase.co/functions/v1/swift-endpoint";
 
 // Staff portal only — validated server-side by your Edge Function.
-var ADMIN_TOKEN    = "UM22021@oakkalar!";
+var ADMIN_TOKEN    = "UM22021@oakkalar";
