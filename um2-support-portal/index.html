@@ -1,995 +1,231 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UM2 · Support Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --ink:#0D1B2A;--ink2:#3D4A5C;--ink3:#7A8599;--line:#E8EBF0;--surface:#F4F5F8;
-  --white:#FFFFFF;--crimson:#8B1A2E;--crimson-light:#F7EEF0;--crimson-mid:#C4273E;
-  --green:#1A5C3A;--green-light:#EBF5F0;--amber:#92500A;--amber-light:#FEF6E8;
-  --blue:#1A4A7A;--blue-light:#EBF2FB;--r:6px;
-}
-body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;font-size:14px;display:flex;flex-direction:column}
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/* LOGIN */
-#loginScreen{display:flex;flex:1;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden}
-#loginScreen::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#f7eef0 0%,#f4f5f8 50%,#ebf2fb 100%);z-index:0}
-#medDoodle{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0.13}
-.login-card{position:relative;z-index:2;background:var(--white);border:1px solid var(--line);border-radius:10px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 8px 40px rgba(139,26,46,0.08),0 2px 8px rgba(13,27,42,0.06)}
-.login-card{background:var(--white);border:1px solid var(--line);border-radius:10px;width:100%;max-width:460px;overflow:hidden}
-.login-head{background:var(--ink);padding:28px 32px}
-.login-badge{background:var(--crimson);color:var(--white);font-family:'Libre Baskerville',serif;font-size:13px;padding:4px 10px;border-radius:4px;letter-spacing:.5px;display:inline-block;margin-bottom:14px}
-.login-head h2{font-family:'Libre Baskerville',serif;font-size:20px;color:var(--white);margin-bottom:4px}
-.login-head p{font-size:12px;color:rgba(255,255,255,.45)}
-.login-body{padding:28px 32px}
-.login-field{margin-bottom:16px}
-.login-field label{display:block;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
-.login-field input{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s}
-.login-field input:focus{border-color:var(--crimson)}
-.login-err{font-size:12px;color:var(--crimson);margin-bottom:14px;display:none;background:var(--crimson-light);padding:9px 12px;border-radius:var(--r)}
-.login-err.show{display:block}
-.btn-login{width:100%;padding:12px;background:var(--crimson);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--white);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:10px}
-.btn-login:hover{background:var(--crimson-mid)}
-.btn-login:disabled{opacity:.5;cursor:not-allowed}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-admin-token",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
-/* HEADER */
-.header{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
-.header-inner{max-width:720px;margin:0 auto;padding:0 28px;height:56px;display:flex;align-items:center;gap:16px}
-.h-brand{display:flex;align-items:center;gap:12px;margin-right:auto}
-.h-badge{background:var(--crimson);color:var(--white);font-family:'Libre Baskerville',serif;font-size:13px;padding:4px 10px;border-radius:4px;letter-spacing:.5px}
-.h-divider{width:1px;height:20px;background:var(--line)}
-.h-name{font-size:13px;color:var(--ink3)}
-.btn-signout{font-size:12px;color:var(--crimson);border:1px solid var(--crimson);border-radius:4px;padding:5px 12px;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s}
-.btn-signout:hover{background:var(--crimson);color:var(--white)}
+const ADMIN_TOKEN = "UM2staff2025!"; // Must match adminticket.html
 
-/* MAIN */
-.main{max-width:720px;margin:0 auto;padding:36px 28px 80px;flex:1;width:100%}
-.ph{margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.ph-left{display:flex;align-items:center;gap:16px}
-.ph-logo{width:44px;height:54px;object-fit:contain;flex-shrink:0}
-.ph-text h2{font-family:'Libre Baskerville',serif;font-size:22px;color:var(--ink);margin-bottom:2px}
-.ph-text p{font-size:13px;color:var(--ink3)}
-.btn-new{padding:9px 18px;background:var(--crimson);color:var(--white);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
-.btn-new:hover{background:var(--crimson-mid)}
-.btn-back{padding:9px 18px;background:transparent;color:var(--crimson);border:1.5px solid var(--crimson);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-back:hover{background:var(--crimson);color:var(--white)}
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
-/* CARD */
-.card{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:16px}
-.card-head{padding:14px 22px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-.card-head-bar{width:3px;height:16px;background:var(--crimson);border-radius:99px;flex-shrink:0}
-.card-head-title{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink3)}
-.card-body{padding:24px 22px}
-.card-footer{padding:12px 22px;border-top:1px solid var(--line);font-size:11px;color:var(--ink3);text-align:center;background:var(--surface)}
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
 
-/* TICKET CARDS */
-.ticket-item{border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;background:var(--white);overflow:hidden}
-.ticket-summary{padding:16px 18px;cursor:pointer;transition:background .12s}
-.ticket-summary:hover{background:var(--surface)}
-.ticket-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px}
-.ticket-id{font-size:11px;font-weight:700;color:var(--crimson);letter-spacing:.5px}
-.ticket-subject{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:3px}
-.ticket-meta{font-size:11px;color:var(--ink3)}
-.ticket-chevron{font-size:12px;color:var(--ink3);transition:transform .2s;flex-shrink:0;margin-top:2px}
-.ticket-item.open .ticket-chevron{transform:rotate(180deg)}
+    const body = await req.json();
+    const { action } = body;
+    const adminToken = req.headers.get("x-admin-token");
+    const isAdmin = adminToken === ADMIN_TOKEN;
 
-/* CONVERSATION */
-.ticket-convo{display:none;border-top:1px solid var(--line)}
-.ticket-item.open .ticket-convo{display:block}
-.convo-messages{padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto}
-.msg{display:flex;flex-direction:column;max-width:85%}
-.msg.student{align-self:flex-end;align-items:flex-end}
-.msg.staff{align-self:flex-start;align-items:flex-start}
-.msg-bubble{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6}
-.msg.student .msg-bubble{background:var(--crimson);color:var(--white);border-radius:12px 12px 2px 12px}
-.msg.staff   .msg-bubble{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px 12px 12px 2px}
-.msg-time{font-size:10px;color:var(--ink3);margin-top:3px;padding:0 2px}
-.msg-sender{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:3px;padding:0 2px}
-.convo-empty{padding:24px 18px;text-align:center;font-size:13px;color:var(--ink3)}
-.convo-input{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;background:var(--surface)}
-.convo-input textarea{flex:1;padding:9px 12px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;resize:none;height:38px;transition:border-color .2s;line-height:1.5}
-.convo-input textarea:focus{border-color:var(--crimson);height:70px}
-.btn-send{padding:8px 16px;background:var(--crimson);color:var(--white);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;align-self:flex-end}
-.btn-send:hover{background:var(--crimson-mid)}
-.btn-send:disabled{opacity:.5;cursor:not-allowed}
+    // ── submitTicket ─────────────────────────────────────────
+    if (action === "submitTicket") {
+      const { studentID, name, email, category, subject, message, attachments } = body;
 
-/* BADGES */
-.badge{display:inline-block;padding:3px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
-.badge-open      {background:var(--amber-light);color:var(--amber);border:1px solid rgba(146,80,10,.15)}
-.badge-inprogress{background:var(--blue-light);color:var(--blue);border:1px solid rgba(26,74,122,.12)}
-.badge-resolved  {background:var(--green-light);color:var(--green);border:1px solid rgba(26,92,58,.12)}
+      if (!studentID || !name || !email || !category || !subject || !message) {
+        return json({ success: false, error: "Missing required fields." });
+      }
 
-/* FORM */
-.field{margin-bottom:18px}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.field label{display:block;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
-.field label .req{color:var(--crimson);margin-left:2px}
-.field input,.field textarea{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s}
-.field input:focus,.field textarea:focus{border-color:var(--crimson)}
-.field input:read-only{background:var(--surface);color:var(--ink3)}
-.field textarea{resize:vertical;min-height:110px}
-.file-input-wrap{border:1.5px dashed var(--line);border-radius:var(--r);padding:14px;background:var(--surface);transition:border-color .2s}
-.file-input-wrap:hover{border-color:var(--crimson)}
-.file-input-wrap input[type="file"]{width:100%;padding:8px;background:var(--white);border:1px solid var(--line);border-radius:var(--r);font-size:12px}
-.file-help{font-size:11px;color:var(--ink3);margin-top:7px;line-height:1.5}
-.file-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-.file-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;background:var(--white);border:1px solid var(--line);border-radius:var(--r);font-size:12px;color:var(--ink2)}
-.file-chip button{border:none;background:transparent;color:var(--crimson);font-size:14px;cursor:pointer;padding:0 4px}
-.file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.attachment-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.attachment-link{display:inline-block;padding:5px 8px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:4px;font-size:11px;color:inherit;text-decoration:none}
-.msg.staff .attachment-link{background:var(--white);border-color:var(--line);color:var(--crimson)}
-.field-err{font-size:12px;color:var(--crimson);margin-top:5px;display:none}
-.field-err.show{display:block}
-.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.cat-btn{padding:12px 8px;border:1.5px solid var(--line);border-radius:var(--r);background:var(--white);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--ink3);cursor:pointer;text-align:center;transition:all .18s;line-height:1.4}
-.cat-btn:hover{border-color:var(--crimson);color:var(--ink)}
-.cat-btn.active{border-color:var(--crimson);background:var(--crimson-light);color:var(--crimson)}
-.cat-icon{display:block;font-size:18px;margin-bottom:5px}
-.divider{height:1px;background:var(--line);margin:22px 0}
-.alert{background:#FEF2F4;border:1px solid #FACDD3;border-radius:var(--r);padding:11px 15px;font-size:13px;color:var(--crimson);margin-bottom:18px;display:none}
-.alert.show{display:block}
-.btn-submit{width:100%;padding:12px;background:var(--crimson);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--white);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:10px}
-.btn-submit:hover{background:var(--crimson-mid)}
-.btn-submit:disabled{opacity:.5;cursor:not-allowed}
-.spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
-.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(13,27,42,.12);border-top-color:var(--crimson);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+      // Generate ticket ID: TKT + timestamp suffix
+      const ticketID = "TKT" + Date.now().toString().slice(-7);
 
-/* SUCCESS */
-#successSection{display:none;padding:52px 32px;text-align:center}
-.success-icon{width:60px;height:60px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:26px;color:var(--green)}
-#successSection h2{font-family:'Libre Baskerville',serif;font-size:22px;color:var(--ink);margin-bottom:6px}
-#successSection p{font-size:13px;color:var(--ink3);line-height:1.7;max-width:340px;margin:0 auto}
-.ticket-badge{display:inline-block;margin:18px auto;padding:10px 28px;background:var(--ink);color:var(--white);font-family:'Libre Baskerville',serif;font-size:26px;letter-spacing:.1em;border-radius:var(--r)}
-.btn-reset{margin-top:22px;padding:10px 24px;background:transparent;color:var(--crimson);border:1.5px solid var(--crimson);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;margin-right:8px}
-.btn-reset:hover{background:var(--crimson);color:var(--white)}
+      const { error: insertErr } = await supabase.from("tickets").insert({
+        ticket_id: ticketID,
+        student_id: studentID,
+        name,
+        email,
+        category,
+        subject,
+        message,
+        status: "Open",
+        attachments: attachments || [],
+        created_at: new Date().toISOString(),
+      });
 
-.empty-state{text-align:center;padding:48px 24px;color:var(--ink3)}
-.empty-state p{font-size:13px;margin-bottom:16px}
-.loading-state{text-align:center;padding:48px 24px;color:var(--ink3);font-size:13px}
-.site-footer{text-align:center;font-size:12px;color:var(--ink3);margin-top:10px}
-.site-footer a{color:var(--crimson);text-decoration:none;font-weight:500}
+      if (insertErr) return json({ success: false, error: insertErr.message });
 
-@media(max-width:520px){
-  .main{padding:24px 16px 60px}
-  .field-row{grid-template-columns:1fr}
-  .cat-grid{grid-template-columns:1fr 1fr}
-  .card-body{padding:18px 16px}
-  .ph{flex-direction:column;align-items:flex-start}
-  .msg{max-width:95%}
-}
-.login-field select{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237A8599' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
-.login-field select:focus{border-color:var(--crimson)}
-.login-field select option[value=""]{color:var(--ink3)}
-</style>
-</head>
-<body>
+      // Insert the first message (student's original message)
+      await supabase.from("messages").insert({
+        ticket_id: ticketID,
+        sender: "student",
+        content: message,
+        attachments: attachments || [],
+        created_at: new Date().toISOString(),
+      });
 
-<!-- MEDICINE DOODLE BACKGROUND -->
-<svg id="medDoodle" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-  <!-- Stethoscopes -->
-  <g stroke="#8B1A2E" stroke-width="3" fill="none" stroke-linecap="round">
-    <path d="M60,40 Q60,80 100,80 Q140,80 140,120 Q140,160 100,160" />
-    <circle cx="100" cy="168" r="12" />
-    <circle cx="52" cy="32" r="6" /><circle cx="68" cy="32" r="6" />
-  </g>
-  <g stroke="#8B1A2E" stroke-width="3" fill="none" stroke-linecap="round" transform="translate(1050,600) scale(0.8)">
-    <path d="M60,40 Q60,80 100,80 Q140,80 140,120 Q140,160 100,160" />
-    <circle cx="100" cy="168" r="12" />
-    <circle cx="52" cy="32" r="6" /><circle cx="68" cy="32" r="6" />
-  </g>
-  <!-- Cross / Medical cross symbols -->
-  <g fill="#8B1A2E">
-    <rect x="280" y="55" width="8" height="28" rx="2"/>
-    <rect x="272" y="63" width="24" height="8" rx="2"/>
-  </g>
-  <g fill="#1A4A7A" opacity="0.6">
-    <rect x="900" y="120" width="7" height="25" rx="2"/>
-    <rect x="893" y="127" width="21" height="7" rx="2"/>
-  </g>
-  <g fill="#8B1A2E" opacity="0.5">
-    <rect x="1100" y="300" width="9" height="31" rx="2"/>
-    <rect x="1091" y="309" width="27" height="9" rx="2"/>
-  </g>
-  <g fill="#1A5C3A" opacity="0.4">
-    <rect x="50" y="500" width="7" height="25" rx="2"/>
-    <rect x="43" y="507" width="21" height="7" rx="2"/>
-  </g>
-  <!-- Pill shapes -->
-  <g stroke="#8B1A2E" stroke-width="2.5" fill="none">
-    <rect x="350" y="180" width="50" height="22" rx="11" />
-    <line x1="375" y1="180" x2="375" y2="202" />
-  </g>
-  <g stroke="#1A4A7A" stroke-width="2.5" fill="none" transform="rotate(-35,800,680)" opacity="0.7">
-    <rect x="780" y="670" width="40" height="18" rx="9" />
-    <line x1="800" y1="670" x2="800" y2="688" />
-  </g>
-  <g stroke="#1A5C3A" stroke-width="2" fill="none" transform="rotate(20,180,700)" opacity="0.5">
-    <rect x="160" y="693" width="45" height="20" rx="10" />
-    <line x1="182" y1="693" x2="182" y2="713" />
-  </g>
-  <g stroke="#8B1A2E" stroke-width="2" fill="none" opacity="0.5" transform="rotate(-15,1000,200)">
-    <rect x="980" y="193" width="42" height="18" rx="9" />
-    <line x1="1001" y1="193" x2="1001" y2="211" />
-  </g>
-  <!-- Syringe shapes -->
-  <g stroke="#1A4A7A" stroke-width="2.5" fill="none" stroke-linecap="round" transform="rotate(45,500,100)">
-    <rect x="490" y="80" width="20" height="50" rx="4"/>
-    <line x1="500" y1="130" x2="500" y2="150"/>
-    <polygon points="496,150 504,150 500,162" fill="#1A4A7A" stroke="none"/>
-    <line x1="490" y1="95" x2="484" y2="95"/><line x1="490" y1="108" x2="484" y2="108"/>
-  </g>
-  <g stroke="#8B1A2E" stroke-width="2" fill="none" stroke-linecap="round" transform="rotate(-30,700,700)" opacity="0.6">
-    <rect x="690" y="680" width="16" height="40" rx="3"/>
-    <line x1="698" y1="720" x2="698" y2="736"/>
-    <polygon points="695,736 701,736 698,746" fill="#8B1A2E" stroke="none"/>
-    <line x1="690" y1="692" x2="685" y2="692"/><line x1="690" y1="703" x2="685" y2="703"/>
-  </g>
-  <!-- DNA / helix suggestion -->
-  <g stroke="#1A5C3A" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5">
-    <path d="M1140,50 Q1155,80 1140,110 Q1125,140 1140,170 Q1155,200 1140,230"/>
-    <path d="M1160,50 Q1145,80 1160,110 Q1175,140 1160,170 Q1145,200 1160,230"/>
-    <line x1="1140" y1="80" x2="1160" y2="80"/>
-    <line x1="1140" y1="140" x2="1160" y2="140"/>
-    <line x1="1140" y1="200" x2="1160" y2="200"/>
-  </g>
-  <g stroke="#8B1A2E" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(30,300)">
-    <path d="M0,0 Q15,30 0,60 Q-15,90 0,120 Q15,150 0,180"/>
-    <path d="M20,0 Q5,30 20,60 Q35,90 20,120 Q5,150 20,180"/>
-    <line x1="0" y1="30" x2="20" y2="30"/>
-    <line x1="0" y1="90" x2="20" y2="90"/>
-    <line x1="0" y1="150" x2="20" y2="150"/>
-  </g>
-  <!-- Heartbeat / ECG line -->
-  <polyline points="600,400 640,400 660,350 680,450 700,370 720,420 760,420 780,400 820,400" stroke="#8B1A2E" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-  <polyline points="100,680 130,680 148,640 164,720 178,655 192,690 220,690" stroke="#1A4A7A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
-  <!-- Microscope simple outline -->
-  <g stroke="#1A4A7A" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5" transform="translate(480,580) scale(0.9)">
-    <rect x="10" y="0" width="14" height="30" rx="3"/>
-    <rect x="5" y="28" width="24" height="10" rx="3"/>
-    <line x1="17" y1="38" x2="17" y2="55"/>
-    <ellipse cx="17" cy="60" rx="18" ry="5"/>
-    <line x1="10" y1="14" x2="0" y2="6"/>
-    <circle cx="-2" cy="4" r="5"/>
-  </g>
-  <!-- Capsule pills scattered -->
-  <g opacity="0.4">
-    <rect x="950" y="400" width="36" height="16" rx="8" fill="none" stroke="#8B1A2E" stroke-width="2" transform="rotate(25,968,408)"/>
-    <rect x="230" y="150" width="30" height="14" rx="7" fill="none" stroke="#1A5C3A" stroke-width="2" transform="rotate(-20,245,157)"/>
-    <rect x="800" y="550" width="32" height="15" rx="7.5" fill="none" stroke="#1A4A7A" stroke-width="2" transform="rotate(40,816,557)"/>
-    <rect x="420" y="700" width="34" height="16" rx="8" fill="none" stroke="#8B1A2E" stroke-width="2" transform="rotate(-10,437,708)"/>
-  </g>
-  <!-- Small dots / molecule nodes -->
-  <circle cx="700" cy="200" r="5" fill="#8B1A2E" opacity="0.25"/>
-  <circle cx="730" cy="220" r="4" fill="#8B1A2E" opacity="0.2"/>
-  <line x1="700" y1="200" x2="730" y2="220" stroke="#8B1A2E" stroke-width="1.5" opacity="0.2"/>
-  <circle cx="760" cy="195" r="5" fill="#1A4A7A" opacity="0.2"/>
-  <line x1="730" y1="220" x2="760" y2="195" stroke="#1A4A7A" stroke-width="1.5" opacity="0.2"/>
-  <circle cx="300" cy="600" r="4" fill="#1A5C3A" opacity="0.2"/>
-  <circle cx="328" cy="618" r="5" fill="#1A5C3A" opacity="0.2"/>
-  <line x1="300" y1="600" x2="328" y2="618" stroke="#1A5C3A" stroke-width="1.5" opacity="0.2"/>
-  <circle cx="350" cy="598" r="4" fill="#8B1A2E" opacity="0.2"/>
-  <line x1="328" y1="618" x2="350" y2="598" stroke="#8B1A2E" stroke-width="1.5" opacity="0.2"/>
-</svg>
+      return json({ success: true, ticketID });
+    }
 
-<!-- LOGIN / REGISTER -->
-<div id="loginScreen">
-  <div class="login-card">
-    <div class="login-head">
-      <div class="login-badge">UM2</div>
-      <h2 id="authHeading">Support Portal</h2>
-      <p id="authSubheading">University of Medicine (2) · Sign in to continue</p>
-    </div>
+    // ── getMyTickets (student) ────────────────────────────────
+    if (action === "getMyTickets") {
+      const { email } = body;
+      if (!email) return json({ success: false, error: "Email required." });
 
-    <!-- TABS -->
-    <div style="display:flex;border-bottom:1px solid var(--line)">
-      <button id="tabSignIn" onclick="switchTab('signin')" style="flex:1;padding:12px;border:none;background:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--crimson);cursor:pointer;border-bottom:2px solid var(--crimson)">Sign In</button>
-      <button id="tabRegister" onclick="switchTab('register')" style="flex:1;padding:12px;border:none;background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent">Register</button>
-    </div>
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("*")
+        .eq("email", email)
+        .order("created_at", { ascending: false });
 
-    <!-- SIGN IN PANEL -->
-    <div id="panelSignIn" class="login-body">
-      <div class="login-err" id="loginErr"></div>
-      <div class="login-field">
-        <label>Email Address</label>
-        <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email">
-      </div>
-      <div class="login-field">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button class="btn-login" id="loginBtn" onclick="signIn()">Sign In</button>
-      <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--ink3)">
-        No account? <a href="#" onclick="switchTab('register');return false;" style="color:var(--crimson);font-weight:600;text-decoration:none">Create one</a>
-      </p>
-    </div>
+      if (error) return json({ success: false, error: error.message });
 
-    <!-- REGISTER PANEL -->
-    <div id="panelRegister" class="login-body" style="display:none">
-      <div class="login-err" id="registerErr"></div>
-      <div class="login-err" id="registerSuccess" style="background:var(--green-light);color:var(--green);border:1px solid rgba(26,92,58,.2)"></div>
-      <div class="field-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div class="login-field" style="margin-bottom:0">
-          <label>Full Name <span style="color:var(--crimson)">*</span></label>
-          <input type="text" id="regName" placeholder="Your full name" autocomplete="name">
-        </div>
-        <div class="login-field" style="margin-bottom:0">
-          <label>Student ID <span style="color:var(--ink3);font-size:11px">(optional)</span></label>
-          <input type="text" id="regStudentID" placeholder="e.g. STU0001">
-        </div>
-      </div>
-      <div class="login-field">
-        <label>Email Address <span style="color:var(--crimson)">*</span></label>
-        <input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email">
-      </div>
-      <div class="login-field">
-        <label>Password <span style="color:var(--crimson)">*</span></label>
-        <input type="password" id="regPassword" placeholder="Min. 6 characters" autocomplete="new-password">
-      </div>
-      <div class="login-field">
-        <label>Confirm Password <span style="color:var(--crimson)">*</span></label>
-        <input type="password" id="regPasswordConfirm" placeholder="Repeat password" autocomplete="new-password">
-      </div>
-      <div class="login-field">
-        <label>Status <span style="color:var(--crimson)">*</span></label>
-        <select id="regStatus">
-          <option value="" disabled selected>Select your status…</option>
-          <option value="active_student">Active Student</option>
-          <option value="inactive_student">Inactive Student</option>
-          <option value="guest">Guest</option>
-          <option value="alumni">Alumni</option>
-        </select>
-      </div>
-      <button class="btn-login" id="registerBtn" onclick="registerUser()">Create Account</button>
-      <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--ink3)">
-        Already registered? <a href="#" onclick="switchTab('signin');return false;" style="color:var(--crimson);font-weight:600;text-decoration:none">Sign in</a>
-      </p>
-    </div>
+      const tickets = (data || []).map(formatTicket);
+      return json({ success: true, tickets });
+    }
 
-  </div>
-</div>
+    // ── getTickets (admin — all tickets) ─────────────────────
+    if (action === "getTickets") {
+      if (!isAdmin) return json({ success: false, error: "Unauthorised." });
 
-<!-- APP -->
-<div id="appScreen" style="display:none;flex-direction:column;flex:1">
-  <div class="header">
-    <div class="header-inner">
-      <div class="h-brand">
-        <span class="h-badge">UM2</span>
-        <div class="h-divider"></div>
-        <span class="h-name">Support Portal</span>
-      </div>
-      <button class="btn-signout" onclick="signOut()">Sign Out</button>
-    </div>
-  </div>
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  <div class="main">
+      if (error) return json({ success: false, error: error.message });
 
-    <!-- DASHBOARD -->
-    <div id="dashboardView">
-      <div class="ph">
-        <div class="ph-left">
-          <img src="/UM2_Logo.svg" alt="UM2" class="ph-logo">
-          <div class="ph-text">
-            <h2>My Tickets</h2>
-            <p id="dashSubtitle">University of Medicine (2) · Support Portal</p>
-          </div>
-        </div>
-        <button class="btn-new" onclick="showForm()">+ New Ticket</button>
-      </div>
+      const tickets = (data || []).map(formatTicket);
+      return json({ success: true, tickets });
+    }
 
-      <div class="card">
-        <div class="card-head">
-          <div class="card-head-bar"></div>
-          <div class="card-head-title">Your Support Tickets</div>
-        </div>
-        <div class="card-body" id="ticketListBody">
-          <div class="loading-state"><span class="spinner-sm"></span> Loading your tickets…</div>
-        </div>
-        <div class="card-footer">Tickets are responded to within 3 working days.</div>
-      </div>
+    // ── getMessages ──────────────────────────────────────────
+    if (action === "getMessages") {
+      const { ticketID, email } = body;
+      if (!ticketID) return json({ success: false, error: "ticketID required." });
 
-      <div class="site-footer">
-        <p>Having trouble? Email <a href="mailto:secretariat.academic@um2campus.org">secretariat.academic@um2campus.org</a></p>
-      </div>
-    </div>
+      // Students can only see their own ticket messages
+      if (!isAdmin) {
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("email")
+          .eq("ticket_id", ticketID)
+          .single();
+        if (!ticket || ticket.email !== email) {
+          return json({ success: false, error: "Unauthorised." });
+        }
+      }
 
-    <!-- FORM VIEW -->
-    <div id="formView" style="display:none">
-      <div class="ph">
-        <div class="ph-left">
-          <img src="/UM2_Logo.svg" alt="UM2" class="ph-logo">
-          <div class="ph-text">
-            <h2>New Support Ticket</h2>
-            <p>University of Medicine (2)</p>
-          </div>
-        </div>
-        <button class="btn-back" onclick="showDashboard()">← My Tickets</button>
-      </div>
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("ticket_id", ticketID)
+        .order("created_at", { ascending: true });
 
-      <div class="card">
-        <div class="card-head">
-          <div class="card-head-bar"></div>
-          <div class="card-head-title">Submit a Support Ticket</div>
-        </div>
+      if (error) return json({ success: false, error: error.message });
 
-        <div id="formSection">
-          <div class="card-body">
-            <div class="alert" id="alertGeneral"></div>
-            <div class="field-row">
-              <div class="field">
-                <label>Student ID <span class="req">*</span></label>
-                <input type="text" id="studentID" placeholder="e.g. STU0001">
-              </div>
-              <div class="field">
-                <label>Full Name <span class="req">*</span></label>
-                <input type="text" id="name" placeholder="Your full name">
-              </div>
-            </div>
-            <div class="field">
-              <label>Email Address</label>
-              <input type="email" id="email" readonly>
-            </div>
-            <div class="divider"></div>
-            <div class="field">
-              <label>Category <span class="req">*</span></label>
-              <div class="cat-grid">
-                <button type="button" class="cat-btn" onclick="selectCat(this,'Grade Inquiry')"><span class="cat-icon">📋</span>Grade Inquiry</button>
-                <button type="button" class="cat-btn" onclick="selectCat(this,'Enrollment Issue')"><span class="cat-icon">🎓</span>Enrollment Issue</button>
-                <button type="button" class="cat-btn" onclick="selectCat(this,'Document Request')"><span class="cat-icon">📄</span>Document Request</button>
-                <button type="button" class="cat-btn" onclick="selectCat(this,'Technical Issue')"><span class="cat-icon">🔧</span>Technical Issue</button>
-                <button type="button" class="cat-btn" onclick="selectCat(this,'Fee & Payment')"><span class="cat-icon">💳</span>Fee &amp; Payment</button>
-                <button type="button" class="cat-btn" onclick="selectCat(this,'Other')"><span class="cat-icon">❓</span>Other</button>
-              </div>
-              <div class="field-err" id="catErr">Please select a category.</div>
-            </div>
-            <div class="field">
-              <label>Subject <span class="req">*</span></label>
-              <input type="text" id="subject" placeholder="Brief description of your issue">
-            </div>
-            <div class="field">
-              <label>Message <span class="req">*</span></label>
-              <textarea id="message" placeholder="Describe your issue in detail…"></textarea>
-            </div>
-            <div class="field">
-              <label>Upload Files / Screenshots</label>
-              <div class="file-input-wrap">
-                <input type="file" id="attachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" onchange="handleAttachmentSelect()">
-                <div class="file-help">You can attach multiple screenshots or files. For reliable submission, keep each file under 5 MB.</div>
-                <div class="file-list" id="attachmentList"></div>
-              </div>
-            </div>
-            <button type="button" class="btn-submit" id="submitBtn" onclick="submitForm()">Submit Ticket</button>
-          </div>
-        </div>
+      return json({ success: true, messages: data || [] });
+    }
 
-        <div id="successSection">
-          <div class="success-icon">✓</div>
-          <h2>Ticket Submitted</h2>
-          <p>Your reference number is:</p>
-          <div class="ticket-badge" id="ticketIDDisplay">—</div>
-          <p>We will respond within <strong>3 working days</strong>.</p>
-          <button type="button" class="btn-reset" onclick="showDashboard()">← My Tickets</button>
-          <button type="button" class="btn-reset" onclick="resetForm()">Submit Another</button>
-        </div>
+    // ── sendMessage ──────────────────────────────────────────
+    if (action === "sendMessage") {
+      const { ticketID, email, content, sender } = body;
+      if (!ticketID || !content || !sender) {
+        return json({ success: false, error: "ticketID, content, sender required." });
+      }
 
-        <div class="card-footer">Please do not contact the office directly regarding ticket status.</div>
-      </div>
-    </div>
+      // Students can only message their own tickets
+      if (!isAdmin && sender !== "student") {
+        return json({ success: false, error: "Unauthorised sender." });
+      }
+      if (!isAdmin) {
+        const { data: ticket } = await supabase
+          .from("tickets")
+          .select("email")
+          .eq("ticket_id", ticketID)
+          .single();
+        if (!ticket || ticket.email !== email) {
+          return json({ success: false, error: "Unauthorised." });
+        }
+      }
 
-  </div>
-</div>
+      const { error } = await supabase.from("messages").insert({
+        ticket_id: ticketID,
+        sender,          // "student" | "staff"
+        content,
+        created_at: new Date().toISOString(),
+      });
 
-<script>
-var SUPABASE_URL      = "https://nbjbievinjirlbyjodcm.supabase.co";
-var SUPABASE_ANON_KEY = "sb_publishable_8rac3A-dDNnQtOm0QL4E0w_pza6kBVP";
-var TICKET_API_URL    = "https://nbjbievinjirlbyjodcm.supabase.co/functions/v1/swift-endpoint";
+      if (error) return json({ success: false, error: error.message });
 
-var sbClient    = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-var currentUser = null;
-var selectedCat = "";
-var selectedAttachments = [];
-var openTicketID = null;
+      // If student replies, auto-set ticket back to Open if it was In Progress
+      if (sender === "student") {
+        await supabase
+          .from("tickets")
+          .update({ status: "Open" })
+          .eq("ticket_id", ticketID)
+          .eq("status", "In Progress");
+      }
 
-// ── INACTIVITY AUTO SIGN-OUT (30 min) ────────────────────────
-var inactivityTimer;
-function resetInactivityTimer() {
-  clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(function() {
-    alert('You have been signed out due to inactivity.');
-    signOut();
-  }, 30 * 60 * 1000);
-}
-['click','keydown','mousemove','touchstart'].forEach(function(evt) {
-  document.addEventListener(evt, resetInactivityTimer, true);
-});
-resetInactivityTimer();
+      return json({ success: true });
+    }
 
-// ── AUTH ──────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async function() {
-  var { data: { session } } = await sbClient.auth.getSession();
-  if (session) { currentUser = session.user; showApp(); }
-  document.getElementById('loginPassword').addEventListener('keydown', function(e){ if(e.key==='Enter') signIn(); });
-  document.getElementById('loginEmail').addEventListener('keydown',    function(e){ if(e.key==='Enter') signIn(); });
-  document.getElementById('regPasswordConfirm').addEventListener('keydown', function(e){ if(e.key==='Enter') registerUser(); });
+    // ── updateTicket (admin) ──────────────────────────────────
+    if (action === "updateTicket") {
+      if (!isAdmin) return json({ success: false, error: "Unauthorised." });
+
+      const { ticketID, status, assignedTo } = body;
+      if (!ticketID) return json({ success: false, error: "ticketID required." });
+
+      const updates: Record<string, unknown> = {};
+      if (status)     updates.status      = status;
+      if (assignedTo !== undefined) updates.assigned_to = assignedTo;
+      updates.updated_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("tickets")
+        .update(updates)
+        .eq("ticket_id", ticketID);
+
+      if (error) return json({ success: false, error: error.message });
+
+      return json({ success: true });
+    }
+
+    return json({ success: false, error: "Unknown action: " + action });
+  } catch (err) {
+    console.error(err);
+    return json({ success: false, error: "Internal server error." }, 500);
+  }
 });
 
-// ── TAB SWITCHER ──────────────────────────────────────────────
-function switchTab(tab) {
-  var isSignIn = tab === 'signin';
-  document.getElementById('panelSignIn').style.display    = isSignIn ? 'block' : 'none';
-  document.getElementById('panelRegister').style.display  = isSignIn ? 'none'  : 'block';
-  document.getElementById('tabSignIn').style.cssText    = 'flex:1;padding:12px;border:none;background:' + (isSignIn ? 'var(--white)' : 'var(--surface)') + ';font-family:\'DM Sans\',sans-serif;font-size:13px;font-weight:' + (isSignIn ? '600' : '500') + ';color:' + (isSignIn ? 'var(--crimson)' : 'var(--ink3)') + ';cursor:pointer;border-bottom:2px solid ' + (isSignIn ? 'var(--crimson)' : 'transparent');
-  document.getElementById('tabRegister').style.cssText  = 'flex:1;padding:12px;border:none;background:' + (isSignIn ? 'var(--surface)' : 'var(--white)') + ';font-family:\'DM Sans\',sans-serif;font-size:13px;font-weight:' + (isSignIn ? '500' : '600') + ';color:' + (isSignIn ? 'var(--ink3)' : 'var(--crimson)') + ';cursor:pointer;border-bottom:2px solid ' + (isSignIn ? 'transparent' : 'var(--crimson)');
-  document.getElementById('loginErr').classList.remove('show');
-  document.getElementById('registerErr').classList.remove('show');
-  document.getElementById('registerSuccess').classList.remove('show');
-}
+// ── Helpers ──────────────────────────────────────────────────
 
-// ── REGISTER ──────────────────────────────────────────────────
-async function registerUser() {
-  var name     = document.getElementById('regName').value.trim();
-  var studentID= document.getElementById('regStudentID').value.trim();
-  var email    = document.getElementById('regEmail').value.trim();
-  var password = document.getElementById('regPassword').value;
-  var confirm  = document.getElementById('regPasswordConfirm').value;
-  var status   = document.getElementById('regStatus').value;
-  var errEl    = document.getElementById('registerErr');
-  var okEl     = document.getElementById('registerSuccess');
-  var btn      = document.getElementById('registerBtn');
-
-  errEl.classList.remove('show'); okEl.classList.remove('show');
-
-  if (!name || !email || !password || !confirm) {
-    errEl.textContent = 'Please fill in all required fields.'; errEl.classList.add('show'); return;
-  }
-  if (!status) {
-    errEl.textContent = 'Please select your status.'; errEl.classList.add('show'); return;
-  }
-  if (password.length < 8) {
-    errEl.textContent = 'Password must be at least 8 characters.'; errEl.classList.add('show'); return;
-  }
-  if (!/[A-Z]/.test(password)) {
-    errEl.textContent = 'Password must include at least one uppercase letter.'; errEl.classList.add('show'); return;
-  }
-  if (!/[0-9]/.test(password)) {
-    errEl.textContent = 'Password must include at least one number.'; errEl.classList.add('show'); return;
-  }
-  if (password !== confirm) {
-    errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return;
-  }
-
-  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Creating account…';
-
-  var { data, error } = await sbClient.auth.signUp({
-    email: email,
-    password: password,
-    options: {
-      data: { full_name: name, student_id: studentID, user_status: status }
-    }
-  });
-
-  btn.disabled = false; btn.textContent = 'Create Account';
-
-  if (error) {
-    errEl.textContent = error.message; errEl.classList.add('show'); return;
-  }
-
-  // If email confirmation is disabled in Supabase, user is logged in immediately
-  if (data.session) {
-    currentUser = data.user; showApp(); return;
-  }
-
-  // Email confirmation is enabled — show success message
-  okEl.textContent = '✓ Account created! Check your email (' + email + ') for a confirmation link, then sign in.';
-  okEl.classList.add('show');
-  ['regName','regStudentID','regEmail','regPassword','regPasswordConfirm'].forEach(function(id){ document.getElementById(id).value=''; });
-  document.getElementById('regStatus').value = '';
-}
-
-async function signIn() {
-  var email    = document.getElementById('loginEmail').value.trim();
-  var password = document.getElementById('loginPassword').value;
-  var btn      = document.getElementById('loginBtn');
-  var errEl    = document.getElementById('loginErr');
-  if (!email || !password) { errEl.textContent='Please enter your email and password.'; errEl.classList.add('show'); return; }
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Signing in…';
-  errEl.classList.remove('show');
-  var { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-  if (error) {
-    errEl.textContent = 'Invalid email or password.';
-    errEl.classList.add('show');
-    btn.disabled = false; btn.textContent = 'Sign In';
-  } else { currentUser = data.user; showApp(); }
-}
-
-async function signOut() {
-  await sbClient.auth.signOut();
-  currentUser = null;
-  document.getElementById('appScreen').style.display   = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
-  switchTab('signin');
-}
-
-function showApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appScreen').style.display   = 'flex';
-  var meta = currentUser.user_metadata || {};
-  document.getElementById('email').value     = currentUser.email || '';
-  document.getElementById('name').value      = meta.full_name  || '';
-  document.getElementById('studentID').value = meta.student_id || '';
-  document.getElementById('dashSubtitle').textContent = currentUser.email + ' · Support Portal';
-  showDashboard();
-}
-
-// ── VIEWS ─────────────────────────────────────────────────────
-function showDashboard() {
-  document.getElementById('dashboardView').style.display = 'block';
-  document.getElementById('formView').style.display      = 'none';
-  loadMyTickets();
-}
-
-function showForm() {
-  document.getElementById('dashboardView').style.display = 'none';
-  document.getElementById('formView').style.display      = 'block';
-  document.getElementById('formSection').style.display   = 'block';
-  document.getElementById('successSection').style.display = 'none';
-}
-
-// ── LOAD TICKETS ──────────────────────────────────────────────
-async function loadMyTickets() {
-  var body = document.getElementById('ticketListBody');
-  body.innerHTML = '<div class="loading-state"><span class="spinner-sm"></span> Loading your tickets…</div>';
-  try {
-    var res  = await api({ action: 'getMyTickets', email: currentUser.email });
-    renderTickets(res.tickets || []);
-  } catch(err) {
-    body.innerHTML = '<div class="loading-state" style="color:var(--crimson)">Failed to load: ' + esc(err.message) + '</div>';
-  }
-}
-
-function renderTickets(tickets) {
-  var body = document.getElementById('ticketListBody');
-  if (!tickets.length) {
-    body.innerHTML = '<div class="empty-state"><p>No tickets yet.</p><button class="btn-new" onclick="showForm()">Submit Your First Ticket</button></div>';
-    return;
-  }
-  body.innerHTML = tickets.map(function(t) {
-    var sc = t.status==='In Progress'?'badge-inprogress':t.status==='Resolved'?'badge-resolved':'badge-open';
-    return '<div class="ticket-item" id="ti-' + esc(t.ticketID) + '">' +
-      '<div class="ticket-summary" onclick="toggleTicket(\'' + esc(t.ticketID) + '\')">' +
-        '<div class="ticket-top">' +
-          '<div>' +
-            '<div class="ticket-id">' + esc(t.ticketID) + '</div>' +
-            '<div class="ticket-subject">' + esc(t.subject) + '</div>' +
-            '<div class="ticket-meta">' + esc(t.category) + ' · ' + esc(t.createdAt) + '</div>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:8px">' +
-            '<span class="badge ' + sc + '">' + esc(t.status) + '</span>' +
-            '<span class="ticket-chevron">▼</span>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="ticket-convo" id="convo-' + esc(t.ticketID) + '">' +
-        '<div class="convo-messages" id="msgs-' + esc(t.ticketID) + '"><div class="convo-empty"><span class="spinner-sm"></span></div></div>' +
-        (t.status !== 'Resolved' ?
-          '<div class="convo-input">' +
-            '<textarea id="reply-' + esc(t.ticketID) + '" placeholder="Type a reply…" onkeydown="handleReplyKey(event,\'' + esc(t.ticketID) + '\')"></textarea>' +
-            '<button class="btn-send" id="send-' + esc(t.ticketID) + '" onclick="sendReply(\'' + esc(t.ticketID) + '\')">Send</button>' +
-          '</div>' : '<div style="padding:10px 18px;font-size:12px;color:var(--green);background:var(--green-light);text-align:center">✓ This ticket is resolved</div>') +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-async function toggleTicket(ticketID) {
-  var item  = document.getElementById('ti-' + ticketID);
-  var isOpen = item.classList.contains('open');
-  // Close all
-  document.querySelectorAll('.ticket-item.open').forEach(function(el){ el.classList.remove('open'); });
-  if (!isOpen) {
-    item.classList.add('open');
-    await loadMessages(ticketID);
-  }
-}
-
-async function loadMessages(ticketID) {
-  var container = document.getElementById('msgs-' + ticketID);
-  container.innerHTML = '<div class="convo-empty"><span class="spinner-sm"></span></div>';
-  try {
-    var res = await api({ action: 'getMessages', ticketID: ticketID, email: currentUser.email });
-    renderMessages(ticketID, res.messages || []);
-  } catch(err) {
-    container.innerHTML = '<div class="convo-empty" style="color:var(--crimson)">Failed to load messages.</div>';
-  }
-}
-
-function renderMessages(ticketID, messages) {
-  var container = document.getElementById('msgs-' + ticketID);
-  if (!messages.length) {
-    container.innerHTML = '<div class="convo-empty">No messages yet — start the conversation below.</div>';
-    return;
-  }
-  container.innerHTML = messages.map(function(m) {
-console.log('MESSAGE DATA:', m);
-   var sender = (m.sender || m.sender_type || m.role || m.author || '').toString().toLowerCase();
-
-var isStaff = sender === 'staff' || sender === 'admin' || sender === 'secretariat';
-
-var side  = isStaff ? 'staff' : 'student';
-var label = isStaff ? 'UM2 Secretariat' : 'You';
-    var rawDate = m.created_at || m.createdAt || m.timestamp || m.date || m.created;
-var d = new Date(rawDate);
-var time = isNaN(d.getTime())
-  ? 'Unknown time'
-  : d.toLocaleString('en-GB', {
-      day:'2-digit',
-      month:'short',
-      year:'numeric',
-      hour:'2-digit',
-      minute:'2-digit'
-    });
-    var attachmentHtml = renderAttachmentLinks(getAttachments(m));
-    return '<div class="msg ' + side + '">' +
-      '<div class="msg-sender">' + label + '</div>' +
-      '<div class="msg-bubble">' + esc(m.content) + attachmentHtml + '</div>' +
-      '<div class="msg-time">' + time + '</div>' +
-    '</div>';
-  }).join('');
-  // Scroll to bottom
-  container.scrollTop = container.scrollHeight;
-}
-
-function handleReplyKey(e, ticketID) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(ticketID); }
-}
-
-async function sendReply(ticketID) {
-  var textarea = document.getElementById('reply-'  + ticketID);
-  var btn      = document.getElementById('send-'   + ticketID);
-  var content  = textarea.value.trim();
-  if (!content) return;
-  btn.disabled = true; btn.textContent = '…';
-  try {
-    await api({ action: 'sendMessage', ticketID: ticketID, email: currentUser.email, content: content, sender: 'student' });
-    textarea.value = '';
-    await loadMessages(ticketID);
-    // Refresh ticket list to update status
-    loadMyTickets();
-    // Re-open the ticket
-    setTimeout(function(){ toggleTicket(ticketID); }, 100);
-  } catch(err) {
-    alert('Failed to send: ' + err.message);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Send';
-  }
-}
-
-// ── FORM ──────────────────────────────────────────────────────
-function selectCat(btn, cat) {
-  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active'); selectedCat = cat;
-  document.getElementById('catErr').classList.remove('show');
-}
-
-
-// 4B — allowed file types and max size
-var ALLOWED_TYPES = [
-  'image/jpeg','image/png','image/gif','image/webp',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain','text/csv'
-];
-var MAX_FILE_MB = 5;
-
-function handleAttachmentSelect() {
-  var input = document.getElementById('attachments');
-  var incoming = Array.prototype.slice.call(input.files || []);
-  var rejected = [];
-  incoming.forEach(function(file) {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      rejected.push(file.name + ' — unsupported file type'); return;
-    }
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      rejected.push(file.name + ' — exceeds 5 MB limit'); return;
-    }
-    selectedAttachments.push(file);
-  });
-  if (rejected.length) {
-    alert('The following files were not added:\n\n' + rejected.join('\n'));
-  }
-  input.value = '';
-  renderSelectedAttachments();
-}
-
-function renderSelectedAttachments() {
-  var list = document.getElementById('attachmentList');
-  if (!list) return;
-  if (!selectedAttachments.length) { list.innerHTML = ''; return; }
-  list.innerHTML = selectedAttachments.map(function(file, idx){
-    return '<div class="file-chip"><span>📎 ' + esc(file.name) + ' (' + formatBytes(file.size) + ')</span><button type="button" onclick="removeAttachment(' + idx + ')">×</button></div>';
-  }).join('');
-}
-
-function removeAttachment(index) {
-  selectedAttachments.splice(index, 1);
-  renderSelectedAttachments();
-}
-
-function fileToAttachment(file) {
-  return new Promise(function(resolve, reject) {
-    var reader = new FileReader();
-    reader.onload = function() {
-      resolve({ name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataUrl: reader.result });
-    };
-    reader.onerror = function() { reject(new Error('Could not read ' + file.name)); };
-    reader.readAsDataURL(file);
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
-async function buildAttachmentsPayload() {
-  var totalBytes = selectedAttachments.reduce(function(sum, file){ return sum + file.size; }, 0);
-  if (totalBytes > 20 * 1024 * 1024) throw new Error('Attachments are too large. Please keep the total upload below 20 MB.');
-  return Promise.all(selectedAttachments.map(fileToAttachment));
+function formatTicket(t: Record<string, unknown>) {
+  return {
+    ticketID:   t.ticket_id,
+    studentID:  t.student_id,
+    name:       t.name,
+    email:      t.email,
+    category:   t.category,
+    subject:    t.subject,
+    message:    t.message,
+    status:     t.status     || "Open",
+    assignedTo: t.assigned_to || "",
+    attachments: t.attachments || [],
+    createdAt:  formatDate(t.created_at as string),
+  };
 }
 
-function formatBytes(bytes) {
-  if (!bytes && bytes !== 0) return '';
-  var units = ['B','KB','MB','GB'];
-  var size = bytes;
-  var unit = 0;
-  while (size >= 1024 && unit < units.length - 1) { size = size / 1024; unit++; }
-  return (unit === 0 ? size : size.toFixed(1)) + ' ' + units[unit];
+function formatDate(iso: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
-
-function getAttachments(obj) {
-  if (!obj) return [];
-  var raw = obj.attachments || obj.files || obj.uploads || obj.attachment || [];
-  if (typeof raw === 'string') {
-    try { raw = JSON.parse(raw); } catch(e) { raw = raw ? [{ url: raw, name: 'Attachment' }] : []; }
-  }
-  if (!Array.isArray(raw)) raw = [raw];
-  return raw.filter(Boolean);
-}
-
-function renderAttachmentLinks(files) {
-  if (!files || !files.length) return '';
-  return '<div class="attachment-list">' + files.map(function(f, i){
-    var name = esc(f.name || f.filename || ('Attachment ' + (i + 1)));
-    var href = esc(f.url || f.dataUrl || f.publicUrl || f.path || '#');
-    var download = esc(f.name || f.filename || 'attachment');
-    return '<a class="attachment-link" href="' + href + '" target="_blank" rel="noopener" download="' + download + '">📎 ' + name + '</a>';
-  }).join('') + '</div>';
-}
-
-// ── SANITISE helper (strips HTML tags) ───────────────────────
-function sanitise(str) {
-  var tmp = document.createElement('div');
-  tmp.textContent = str;
-  return tmp.innerHTML;
-}
-
-var lastSubmit = 0;
-
-async function submitForm() {
-  // 2C — rate limit: 10 seconds between submits
-  var now = Date.now();
-  if (now - lastSubmit < 10000) {
-    var al = document.getElementById('alertGeneral');
-    al.textContent = 'Please wait a moment before submitting again.'; al.classList.add('show'); return;
-  }
-
-  // 2A — sanitise all free-text inputs
-  var studentID = sanitise(document.getElementById('studentID').value.trim());
-  var name      = sanitise(document.getElementById('name').value.trim());
-  var subject   = sanitise(document.getElementById('subject').value.trim());
-  var message   = sanitise(document.getElementById('message').value.trim());
-
-  document.getElementById('alertGeneral').classList.remove('show');
-  document.getElementById('catErr').classList.remove('show');
-
-  if (!studentID || !name || !subject || !message) {
-    var al = document.getElementById('alertGeneral');
-    al.textContent = 'Please fill in all required fields.'; al.classList.add('show'); return;
-  }
-
-  // 2B — validate Student ID format (e.g. STU0001)
-  var idPattern = /^[A-Z]{2,4}[0-9]{4,6}$/;
-  if (!idPattern.test(studentID)) {
-    var al = document.getElementById('alertGeneral');
-    al.textContent = 'Student ID format is invalid (e.g. STU0001).'; al.classList.add('show'); return;
-  }
-
-  if (!selectedCat) { document.getElementById('catErr').classList.add('show'); return; }
-
-  lastSubmit = Date.now();
-
-  var btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Submitting…';
-
-  try {
-    var attachments = await buildAttachmentsPayload();
-    var result = await api({
-      action: 'submitTicket', studentID: studentID, name: name,
-      email: currentUser.email, category: selectedCat,
-      subject: '[' + selectedCat + '] ' + subject, message: message,
-      attachments: attachments
-    });
-    document.getElementById('ticketIDDisplay').textContent  = result.ticketID;
-    document.getElementById('formSection').style.display    = 'none';
-    document.getElementById('successSection').style.display = 'block';
-  } catch(err) {
-    var al = document.getElementById('alertGeneral');
-    al.textContent = 'Submission failed: ' + err.message; al.classList.add('show');
-    btn.disabled = false; btn.textContent = 'Submit Ticket';
-  }
-}
-
-function resetForm() {
-  ['studentID','name','subject','message'].forEach(function(id){ document.getElementById(id).value=''; });
-  selectedAttachments = [];
-  renderSelectedAttachments();
-  selectedCat = '';
-  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
-  document.getElementById('formSection').style.display    = 'block';
-  document.getElementById('successSection').style.display = 'none';
-  var btn = document.getElementById('submitBtn');
-  btn.disabled = false; btn.textContent = 'Submit Ticket';
-}
-
-// ── API ───────────────────────────────────────────────────────
-async function api(payload, adminToken) {
-  var headers = { 'Content-Type': 'application/json' };
-  if (adminToken) headers['x-admin-token'] = adminToken;
-
-  // 4A — attach the live Supabase JWT so the Edge Function can verify identity
-  var { data: { session } } = await sbClient.auth.getSession();
-  if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
-
-  var res  = await fetch(TICKET_API_URL, { method:'POST', headers:headers, body:JSON.stringify(payload) });
-  var json = await res.json().catch(function(){ return {}; });
-  if (!res.ok || json.success===false) throw new Error(json.error || 'Request failed');
-  return json;
-}
-
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-</script>
-
-<footer style="
-  text-align:center;
-  padding:18px 12px;
-  font-size:12px;
-  color:#7A8599;
-  border-top:1px solid #E8EBF0;
-  margin-top:auto;
-  background:#fff;
-">
-  Developed by UM2IUC · © 2026 All Rights Reserved
-<br>
-<a href="admin.html" style="
-  color:#7A8599;
-  text-decoration:none;
-  font-weight:400;
-  font-size:11px;
-  opacity:0.6;
-">
-  Staff Portal
-</a>
-</footer>
-
-</body>
-</html>
