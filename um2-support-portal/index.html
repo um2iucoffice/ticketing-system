@@ -1,231 +1,37 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>UM2 Support Portal</title>
+</head>
+<body>
+  <h1>UM2 Support Portal</h1>
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-admin-token",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+  <form id="ticketForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <button type="submit">Submit</button>
+  </form>
 
-const ADMIN_TOKEN = "UM2staff2025!"; // Must match adminticket.html
+  <script type="module">
+    import { CONFIG } from './js/config.js';
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+    document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const body = await req.json();
-    const { action } = body;
-    const adminToken = req.headers.get("x-admin-token");
-    const isAdmin = adminToken === ADMIN_TOKEN;
-
-    // ── submitTicket ─────────────────────────────────────────
-    if (action === "submitTicket") {
-      const { studentID, name, email, category, subject, message, attachments } = body;
-
-      if (!studentID || !name || !email || !category || !subject || !message) {
-        return json({ success: false, error: "Missing required fields." });
-      }
-
-      // Generate ticket ID: TKT + timestamp suffix
-      const ticketID = "TKT" + Date.now().toString().slice(-7);
-
-      const { error: insertErr } = await supabase.from("tickets").insert({
-        ticket_id: ticketID,
-        student_id: studentID,
-        name,
-        email,
-        category,
-        subject,
-        message,
-        status: "Open",
-        attachments: attachments || [],
-        created_at: new Date().toISOString(),
+      const res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'submitTicket',
+          name: document.getElementById('name').value
+        })
       });
 
-      if (insertErr) return json({ success: false, error: insertErr.message });
-
-      // Insert the first message (student's original message)
-      await supabase.from("messages").insert({
-        ticket_id: ticketID,
-        sender: "student",
-        content: message,
-        attachments: attachments || [],
-        created_at: new Date().toISOString(),
-      });
-
-      return json({ success: true, ticketID });
-    }
-
-    // ── getMyTickets (student) ────────────────────────────────
-    if (action === "getMyTickets") {
-      const { email } = body;
-      if (!email) return json({ success: false, error: "Email required." });
-
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("*")
-        .eq("email", email)
-        .order("created_at", { ascending: false });
-
-      if (error) return json({ success: false, error: error.message });
-
-      const tickets = (data || []).map(formatTicket);
-      return json({ success: true, tickets });
-    }
-
-    // ── getTickets (admin — all tickets) ─────────────────────
-    if (action === "getTickets") {
-      if (!isAdmin) return json({ success: false, error: "Unauthorised." });
-
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) return json({ success: false, error: error.message });
-
-      const tickets = (data || []).map(formatTicket);
-      return json({ success: true, tickets });
-    }
-
-    // ── getMessages ──────────────────────────────────────────
-    if (action === "getMessages") {
-      const { ticketID, email } = body;
-      if (!ticketID) return json({ success: false, error: "ticketID required." });
-
-      // Students can only see their own ticket messages
-      if (!isAdmin) {
-        const { data: ticket } = await supabase
-          .from("tickets")
-          .select("email")
-          .eq("ticket_id", ticketID)
-          .single();
-        if (!ticket || ticket.email !== email) {
-          return json({ success: false, error: "Unauthorised." });
-        }
-      }
-
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("ticket_id", ticketID)
-        .order("created_at", { ascending: true });
-
-      if (error) return json({ success: false, error: error.message });
-
-      return json({ success: true, messages: data || [] });
-    }
-
-    // ── sendMessage ──────────────────────────────────────────
-    if (action === "sendMessage") {
-      const { ticketID, email, content, sender } = body;
-      if (!ticketID || !content || !sender) {
-        return json({ success: false, error: "ticketID, content, sender required." });
-      }
-
-      // Students can only message their own tickets
-      if (!isAdmin && sender !== "student") {
-        return json({ success: false, error: "Unauthorised sender." });
-      }
-      if (!isAdmin) {
-        const { data: ticket } = await supabase
-          .from("tickets")
-          .select("email")
-          .eq("ticket_id", ticketID)
-          .single();
-        if (!ticket || ticket.email !== email) {
-          return json({ success: false, error: "Unauthorised." });
-        }
-      }
-
-      const { error } = await supabase.from("messages").insert({
-        ticket_id: ticketID,
-        sender,          // "student" | "staff"
-        content,
-        created_at: new Date().toISOString(),
-      });
-
-      if (error) return json({ success: false, error: error.message });
-
-      // If student replies, auto-set ticket back to Open if it was In Progress
-      if (sender === "student") {
-        await supabase
-          .from("tickets")
-          .update({ status: "Open" })
-          .eq("ticket_id", ticketID)
-          .eq("status", "In Progress");
-      }
-
-      return json({ success: true });
-    }
-
-    // ── updateTicket (admin) ──────────────────────────────────
-    if (action === "updateTicket") {
-      if (!isAdmin) return json({ success: false, error: "Unauthorised." });
-
-      const { ticketID, status, assignedTo } = body;
-      if (!ticketID) return json({ success: false, error: "ticketID required." });
-
-      const updates: Record<string, unknown> = {};
-      if (status)     updates.status      = status;
-      if (assignedTo !== undefined) updates.assigned_to = assignedTo;
-      updates.updated_at = new Date().toISOString();
-
-      const { error } = await supabase
-        .from("tickets")
-        .update(updates)
-        .eq("ticket_id", ticketID);
-
-      if (error) return json({ success: false, error: error.message });
-
-      return json({ success: true });
-    }
-
-    return json({ success: false, error: "Unknown action: " + action });
-  } catch (err) {
-    console.error(err);
-    return json({ success: false, error: "Internal server error." }, 500);
-  }
-});
-
-// ── Helpers ──────────────────────────────────────────────────
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-function formatTicket(t: Record<string, unknown>) {
-  return {
-    ticketID:   t.ticket_id,
-    studentID:  t.student_id,
-    name:       t.name,
-    email:      t.email,
-    category:   t.category,
-    subject:    t.subject,
-    message:    t.message,
-    status:     t.status     || "Open",
-    assignedTo: t.assigned_to || "",
-    attachments: t.attachments || [],
-    createdAt:  formatDate(t.created_at as string),
-  };
-}
-
-function formatDate(iso: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
+      const data = await res.json();
+      alert(JSON.stringify(data));
+    });
+  </script>
+</body>
+</html>
