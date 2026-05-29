@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UM2 · Staff Portal — Support Tickets</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D1B2A;
+  --ink2:#3D4A5C;
+  --ink3:#7A8599;
+  --line:#E8EBF0;
+  --surface:#F4F5F8;
+  --white:#FFFFFF;
+  --crimson:#8B1A2E;
+  --crimson-light:#F7EEF0;
+  --crimson-mid:#C4273E;
+  --gold:#9A7B2F;
+  --gold-light:#FBF6E8;
+  --green:#1A5C3A;
+  --green-light:#EBF5F0;
+  --amber:#92500A;
+  --amber-light:#FEF6E8;
+  --blue:#1A4A7A;
+  --blue-light:#EBF2FB;
+  --r:6px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;font-size:14px;display:flex;flex-direction:column}
+#accessDeniedScreen{display:none;flex:1;align-items:center;justify-content:center;padding:24px}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{display:flex;flex:1;align-items:center;justify-content:center;padding:24px}
+.login-card{background:var(--white);border:1px solid var(--line);border-radius:10px;width:100%;max-width:400px;overflow:hidden}
+.login-head{background:var(--ink);padding:28px 32px}
+.login-head .h-badge{background:var(--crimson);color:var(--white);font-family:'Libre Baskerville',serif;font-size:13px;padding:4px 10px;border-radius:4px;letter-spacing:.5px;display:inline-block;margin-bottom:14px}
+.login-head h2{font-family:'Libre Baskerville',serif;font-size:20px;color:var(--white);margin-bottom:4px}
+.login-head p{font-size:12px;color:rgba(255,255,255,.45)}
+.login-body{padding:28px 32px}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+.login-field input{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s}
+.login-field input:focus{border-color:var(--crimson)}
+.login-err{font-size:12px;color:var(--crimson);margin-bottom:14px;display:none;background:var(--crimson-light);padding:9px 12px;border-radius:var(--r)}
+.login-err.show{display:block}
+.btn-login{width:100%;padding:12px;background:var(--crimson);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--white);cursor:pointer;letter-spacing:.3px;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-login:hover{background:var(--crimson-mid)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── HEADER ── */
+.header{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+.header-inner{max-width:1120px;margin:0 auto;padding:0 28px;height:56px;display:flex;align-items:center;gap:16px}
+.h-brand{display:flex;align-items:center;gap:12px;margin-right:auto}
+.h-badge{background:var(--crimson);color:var(--white);font-family:'Libre Baskerville',serif;font-size:13px;padding:4px 10px;border-radius:4px;letter-spacing:.5px}
+.h-divider{width:1px;height:20px;background:var(--line)}
+.h-name{font-size:13px;color:var(--ink3)}
+.h-role{font-size:11px;color:var(--white);background:var(--ink2);padding:3px 9px;border-radius:3px;letter-spacing:.5px;font-weight:600}
+.h-link{font-size:12px;color:var(--ink3);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:5px 12px;transition:all .15s;background:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+.h-link:hover{border-color:var(--crimson);color:var(--crimson)}
+.btn-signout{font-size:12px;color:var(--crimson);border:1px solid var(--crimson);border-radius:4px;padding:5px 12px;transition:all .15s;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500}
+.btn-signout:hover{background:var(--crimson);color:var(--white)}
+
+/* ── MAIN ── */
+.main{max-width:1120px;margin:0 auto;padding:32px 28px 80px;flex:1;width:100%}
+
+/* ── PAGE HEADER ── */
+.ph{margin-bottom:24px}
+.ph h2{font-family:'Libre Baskerville',serif;font-size:24px;color:var(--ink);margin-bottom:3px}
+.ph p{font-size:13px;color:var(--ink3)}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.stat-card.sc-all::after{background:var(--ink3)}
+.stat-card.sc-open::after{background:var(--amber)}
+.stat-card.sc-prog::after{background:var(--blue)}
+.stat-card.sc-done::after{background:var(--green)}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.stat-val{font-family:'Libre Baskerville',serif;font-size:36px;color:var(--ink);line-height:1}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar input[type="text"]{flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s}
+.toolbar input:focus{border-color:var(--crimson)}
+.toolbar input::placeholder{color:#C5CBD6}
+.toolbar select,.toolbar input[type="date"]{padding:8px 10px;border:1.5px solid var(--line);border-radius:var(--r);background:var(--white);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink2);outline:none}
+.toolbar select:focus,.toolbar input[type="date"]:focus{border-color:var(--crimson)}
+.time-filter-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.time-filter-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3)}
+.attachment-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:18px}
+.attachment-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.attachment-link{display:inline-block;padding:6px 9px;background:var(--white);border:1px solid var(--line);border-radius:4px;font-size:12px;color:var(--crimson);text-decoration:none}
+.attachment-link:hover{border-color:var(--crimson)}
+.filter-btn{padding:8px 14px;border:1.5px solid var(--line);border-radius:var(--r);background:var(--white);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--ink3);cursor:pointer;letter-spacing:.3px;transition:all .15s;white-space:nowrap}
+.filter-btn:hover{border-color:var(--crimson);color:var(--ink)}
+.filter-btn.active{background:var(--crimson);color:var(--white);border-color:var(--crimson)}
+.btn-refresh{padding:8px 16px;background:var(--ink);color:var(--white);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-refresh:hover{background:var(--ink2)}
+.btn-refresh:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── TABLE WRAP ── */
+.table-wrap{background:var(--white);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.loading-row,.empty-row{padding:52px 24px;text-align:center;color:var(--ink3);font-size:13px}
+.spinner-sm{display:inline-block;width:15px;height:15px;border:2px solid rgba(13,27,42,.12);border-top-color:var(--crimson);border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
+.spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--surface);border-bottom:1px solid var(--line)}
+th{padding:10px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--line);transition:background .12s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover td{background:#FAFBFC}
+td{padding:13px 16px;vertical-align:middle;color:var(--ink)}
+td.id-cell{font-weight:600;font-size:12px;color:var(--crimson);letter-spacing:.5px}
+td.subject-cell{max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td.date-cell{font-size:11px;color:var(--ink3);white-space:nowrap}
+.badge{display:inline-block;padding:3px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.badge-open      {background:var(--amber-light);color:var(--amber);border:1px solid rgba(146,80,10,.15)}
+.badge-inprogress{background:var(--blue-light);color:var(--blue);border:1px solid rgba(26,74,122,.12)}
+.badge-resolved  {background:var(--green-light);color:var(--green);border:1px solid rgba(26,92,58,.12)}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,42,.5);z-index:200;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border:1px solid var(--line);border-radius:8px;width:100%;max-width:600px;overflow:hidden;margin:auto}
+.modal-header{background:var(--ink);padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.modal-header h2{font-family:'Libre Baskerville',serif;font-size:18px;color:var(--white);line-height:1.3;margin-bottom:3px}
+.modal-ticket-id{font-size:11px;color:rgba(255,255,255,.45);letter-spacing:.8px}
+.btn-close{background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.btn-close:hover{background:rgba(255,255,255,.1);color:var(--white)}
+.modal-body{padding:24px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:20px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.info-item{padding:13px 16px;border-bottom:1px solid var(--line)}
+.info-item:nth-child(odd){border-right:1px solid var(--line)}
+.info-item:nth-last-child(-n+2){border-bottom:none}
+.info-item .lbl{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:3px}
+.info-item .val{font-size:13px;color:var(--ink)}
+.msg-block{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;font-size:13px;color:var(--ink);line-height:1.7;margin-bottom:20px}
+.msg-lbl{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.modal-divider{height:1px;background:var(--line);margin:20px 0}
+.staff-section-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+.form-row{margin-bottom:16px}
+.form-row label{display:block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--crimson)}
+.form-row textarea{resize:vertical;min-height:80px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;background:var(--surface);border-top:1px solid var(--line)}
+.btn-cancel{padding:9px 20px;background:transparent;border:1.5px solid var(--line);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;color:var(--ink3);cursor:pointer;transition:all .15s}
+.btn-cancel:hover{border-color:var(--crimson);color:var(--crimson)}
+.btn-save{padding:9px 24px;background:var(--crimson);color:var(--white);border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:8px}
+.btn-save:hover{background:var(--crimson-mid)}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+.save-msg{font-size:12px;color:var(--green);padding:10px 0;display:none}
+.save-msg.visible{display:block}
+.error-msg{font-size:12px;color:var(--crimson);padding:10px 0;display:none}
+.error-msg.visible{display:block}
+
+@media(max-width:700px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .header-inner,.main{padding-left:16px;padding-right:16px}
+  .info-grid{grid-template-columns:1fr}
+  .info-item:nth-child(odd){border-right:none}
+  .info-item:nth-last-child(-n+2){border-bottom:1px solid var(--line)}
+  .info-item:last-child{border-bottom:none}
+  th:nth-child(5),td:nth-child(5),
+  th:nth-child(6),td:nth-child(6){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-head">
+      <div class="h-badge">UM2</div>
+      <h2>Staff Portal</h2>
+      <p>Sign in to manage support tickets</p>
+    </div>
+    <div class="login-body">
+      <div class="login-err" id="loginErr"></div>
+      <div class="login-field">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-login" id="loginBtn" onclick="signIn()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ACCESS DENIED SCREEN ── -->
+<div id="accessDeniedScreen" style="display:none;flex:1;align-items:center;justify-content:center;padding:24px">
+  <div class="login-card">
+    <div class="login-head" style="background:#7A1828">
+      <div class="h-badge" style="background:rgba(255,255,255,.15);color:#fff">UM2</div>
+      <h2>Access Denied</h2>
+      <p>You do not have permission to access the Staff Portal.</p>
+    </div>
+    <div class="login-body" style="text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">🔒</div>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.7;margin-bottom:20px">
+        This portal is restricted to authorised UM2 secretariat staff only.<br>
+        If you believe this is an error, please contact your administrator.
+      </p>
+      <div id="accessDeniedEmail" style="font-size:12px;color:var(--ink3);margin-bottom:20px;padding:8px 12px;background:var(--surface);border-radius:var(--r)"></div>
+      <button class="btn-login" onclick="signOut()" style="background:var(--ink)">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN APP (hidden until logged in) ── -->
+<div id="appScreen" style="display:none;flex-direction:column;flex:1">
+  <div class="header">
+    <div class="header-inner">
+      <div class="h-brand">
+        <span class="h-badge">UM2</span>
+        <div class="h-divider"></div>
+        <span class="h-name">Staff Portal</span>
+        <span class="h-role">Secretariat</span>
+      </div>
+      <a href="index.html" class="h-link">← Student Form</a>
+      <button class="btn-signout" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="ph">
+      <h2>Support Tickets</h2>
+      <p>View and manage all student support requests</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card sc-all">
+        <div class="stat-lbl">Total Tickets</div>
+        <div class="stat-val" id="statTotal">—</div>
+      </div>
+      <div class="stat-card sc-open">
+        <div class="stat-lbl">Open</div>
+        <div class="stat-val" id="statOpen">—</div>
+      </div>
+      <div class="stat-card sc-prog">
+        <div class="stat-lbl">In Progress</div>
+        <div class="stat-val" id="statProgress">—</div>
+      </div>
+      <div class="stat-card sc-done">
+        <div class="stat-lbl">Resolved</div>
+        <div class="stat-val" id="statResolved">—</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="Search by ticket ID, name, email or subject…" oninput="renderTable()">
+      <button class="filter-btn active" data-status="All"         onclick="setFilter(this)">All</button>
+      <button class="filter-btn"        data-status="Open"        onclick="setFilter(this)">Open</button>
+      <button class="filter-btn"        data-status="In Progress" onclick="setFilter(this)">In Progress</button>
+      <button class="filter-btn"        data-status="Resolved"    onclick="setFilter(this)">Resolved</button>
+      <div class="time-filter-group">
+        <span class="time-filter-label">Submitted</span>
+        <select id="timeFilter" onchange="handleTimeFilterChange()">
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="custom">Custom range</option>
+        </select>
+        <input type="date" id="dateFrom" onchange="renderTable()" style="display:none">
+        <input type="date" id="dateTo" onchange="renderTable()" style="display:none">
+      </div>
+      <button class="btn-refresh" id="refreshBtn" onclick="loadTickets()">
+        <span id="refreshSpinner" style="display:none" class="spinner-sm"></span>
+        Refresh
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading-row" id="loadingRow"><span class="spinner-sm"></span> Loading tickets…</div>
+      <div class="empty-row"   id="emptyRow"   style="display:none">No tickets found.</div>
+      <table id="ticketTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Ticket ID</th><th>Student</th><th>Subject</th>
+            <th>Status</th><th>Assigned To</th><th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="ticketBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal ── -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="modalSubject">Subject</h2>
+        <div class="modal-ticket-id" id="modalTicketId"></div>
+      </div>
+      <button class="btn-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid">
+        <div class="info-item"><div class="lbl">Student ID</div><div class="val" id="mStudentID">—</div></div>
+        <div class="info-item"><div class="lbl">Student Name</div><div class="val" id="mName">—</div></div>
+        <div class="info-item"><div class="lbl">Email</div><div class="val" id="mEmail">—</div></div>
+        <div class="info-item"><div class="lbl">Submitted</div><div class="val" id="mDate">—</div></div>
+      </div>
+
+      <div class="attachment-panel" id="mAttachmentsPanel" style="display:none">
+        <div class="staff-section-lbl" style="margin-bottom:0">Submitted Attachments</div>
+        <div class="attachment-list" id="mAttachments"></div>
+      </div>
+
+      <!-- Conversation thread -->
+      <div class="modal-divider"></div>
+      <div class="staff-section-lbl">Conversation</div>
+      <div id="mMessages" style="display:flex;flex-direction:column;gap:10px;max-height:280px;overflow-y:auto;padding:4px 0;margin-bottom:14px">
+        <div style="text-align:center;font-size:13px;color:var(--ink3)"><span class="spinner-sm"></span></div>
+      </div>
+
+      <!-- Staff reply input -->
+      <div class="form-row">
+        <label>Reply to Student</label>
+        <textarea id="mReply" placeholder="Type your reply…" style="min-height:70px"></textarea>
+      </div>
+
+      <div class="modal-divider"></div>
+      <div class="staff-section-lbl">Ticket Settings</div>
+      <div class="form-row">
+        <label>Status</label>
+        <select id="mStatus">
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Assign To (staff email)</label>
+        <input type="email" id="mAssignedTo" placeholder="staff@um2campus.org">
+      </div>
+      <div class="save-msg"  id="saveMsg">✓ Saved successfully.</div>
+      <div class="error-msg" id="saveErr"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtn" onclick="saveTicket()">
+        <span id="saveSpinner" style="display:none" class="spinner-sm"></span>
+        Send &amp; Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ── update SUPABASE_ANON_KEY only ───────────────────
+var SUPABASE_URL      = "https://nbjbievinjirlbyjodcm.supabase.co";
+var SUPABASE_ANON_KEY = "sb_publishable_8rac3A-dDNnQtOm0QL4E0w_pza6kBVP";
+var TICKET_API_URL    = "https://nbjbievinjirlbyjodcm.supabase.co/functions/v1/swift-endpoint";
+// Admin token is sent in the x-admin-token header for API calls that require it.
+// This value is validated server-side by your Edge Function.
+var ADMIN_TOKEN       = "UM2staff2025!";
+// ─────────────────────────────────────────────────────────────
+
+var sbClient      = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var currentFilter = 'All';
+var allTickets    = [];
+var currentTicket = null;
+
+// ── ROLE CHECK ───────────────────────────────────────────────
+// Allowed roles — set via Supabase Dashboard:
+//   Authentication → Users → [user] → app_metadata → { "role": "admin" }
+// or via a server-side function. Never trust user_metadata for security.
+var ALLOWED_ROLES = ['admin', 'staff', 'secretariat'];
+
+function isAdminUser(user) {
+  if (!user) return false;
+  // Check app_metadata first (server-controlled, cannot be set by user)
+  var appRole = (user.app_metadata && (user.app_metadata.role || user.app_metadata.user_role)) || '';
+  if (ALLOWED_ROLES.indexOf(appRole.toLowerCase()) !== -1) return true;
+  // Fallback: check user email domain as a secondary guard
+  // (This alone is NOT secure — app_metadata is the authoritative check)
+  return false;
+}
+
+window.addEventListener('DOMContentLoaded', async function() {
+  var { data: { session } } = await sbClient.auth.getSession();
+  if (session) {
+    if (isAdminUser(session.user)) {
+      showApp();
+    } else {
+      showAccessDenied(session.user);
+    }
+  }
+  document.getElementById('loginPassword').addEventListener('keydown', function(e){ if(e.key==='Enter') signIn(); });
+  document.getElementById('loginEmail').addEventListener('keydown',    function(e){ if(e.key==='Enter') signIn(); });
+});
+
+async function signIn() {
+  var email    = document.getElementById('loginEmail').value.trim();
+  var password = document.getElementById('loginPassword').value;
+  var btn      = document.getElementById('loginBtn');
+  var errEl    = document.getElementById('loginErr');
+  if (!email || !password) { errEl.textContent='Please enter your email and password.'; errEl.classList.add('show'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Signing in…';
+  errEl.classList.remove('show');
+  var { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = 'Invalid email or password.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  } else {
+    if (isAdminUser(data.user)) {
+      showApp();
+    } else {
+      showAccessDenied(data.user);
+    }
+  }
+}
+
+async function signOut() {
+  await sbClient.auth.signOut();
+  document.getElementById('appScreen').style.display          = 'none';
+  document.getElementById('accessDeniedScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display        = 'flex';
+  document.getElementById('loginEmail').value    = '';
+  document.getElementById('loginPassword').value = '';
+  allTickets = [];
+}
+
+function showAccessDenied(user) {
+  document.getElementById('loginScreen').style.display        = 'none';
+  document.getElementById('appScreen').style.display          = 'none';
+  document.getElementById('accessDeniedScreen').style.display = 'flex';
+  var emailEl = document.getElementById('accessDeniedEmail');
+  if (emailEl && user) emailEl.textContent = 'Signed in as: ' + (user.email || '');
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display        = 'none';
+  document.getElementById('accessDeniedScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display          = 'flex';
+  loadTickets();
+}
+
+async function apiRequest(payload, adminRequired) {
+  var headers = { 'Content-Type': 'application/json' };
+  if (adminRequired) headers['x-admin-token'] = ADMIN_TOKEN;
+  var res  = await fetch(TICKET_API_URL, { method:'POST', headers:headers, body:JSON.stringify(payload) });
+  var json = await res.json().catch(function(){ return {}; });
+  if (!res.ok || json.success===false) throw new Error(json.error || 'Request failed');
+  return json;
+}
+
+async function loadTickets() {
+  var btn = document.getElementById('refreshBtn');
+  var sp  = document.getElementById('refreshSpinner');
+  btn.disabled = true; sp.style.display = 'inline-block';
+  document.getElementById('loadingRow').style.display  = 'block';
+  document.getElementById('emptyRow').style.display    = 'none';
+  document.getElementById('ticketTable').style.display = 'none';
+  try {
+    var data = await apiRequest({ action:'getTickets' }, true);
+    allTickets = data.tickets || [];
+    updateStats(); renderTable();
+  } catch(err) {
+    document.getElementById('loadingRow').innerHTML = '<span style="color:var(--crimson)">Failed to load tickets: ' + esc(err.message) + '</span>';
+  } finally {
+    btn.disabled = false; sp.style.display = 'none';
+  }
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent    = allTickets.length;
+  document.getElementById('statOpen').textContent     = allTickets.filter(function(t){return t.status==='Open'}).length;
+  document.getElementById('statProgress').textContent = allTickets.filter(function(t){return t.status==='In Progress'}).length;
+  document.getElementById('statResolved').textContent = allTickets.filter(function(t){return t.status==='Resolved'}).length;
+}
+
+function setFilter(btn) {
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active'); currentFilter = btn.dataset.status; renderTable();
+}
+
+function renderTable() {
+  var query = document.getElementById('searchInput').value.toLowerCase();
+
+  var filtered = allTickets.filter(function(t) {
+    var matchFilter = currentFilter === 'All' || t.status === currentFilter;
+
+    var matchSearch =
+      !query ||
+      (t.ticketID || '').toLowerCase().includes(query) ||
+      (t.name || '').toLowerCase().includes(query) ||
+      (t.email || '').toLowerCase().includes(query) ||
+      (t.subject || '').toLowerCase().includes(query);
+
+    var matchTime = matchesSubmittedTime(t);
+
+    return matchFilter && matchSearch && matchTime;
+  });
+
+  var tbody = document.getElementById('ticketBody');
+  tbody.innerHTML = '';
+
+  document.getElementById('loadingRow').style.display = 'none';
+
+  if (!filtered.length) {
+    document.getElementById('emptyRow').style.display = 'block';
+    document.getElementById('ticketTable').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('emptyRow').style.display = 'none';
+  document.getElementById('ticketTable').style.display = 'table';
+
+  filtered.forEach(function(t) {
+    var tr = document.createElement('tr');
+    tr.onclick = function() { openModal(t); };
+
+    var sc =
+      t.status === 'In Progress'
+        ? 'badge-inprogress'
+        : t.status === 'Resolved'
+        ? 'badge-resolved'
+        : 'badge-open';
+
+    tr.innerHTML = [
+      '<td class="id-cell">' + esc(t.ticketID) + '</td>',
+      '<td>' +
+        esc(t.name) +
+        '<br><span style="font-size:11px;color:var(--ink3)">' +
+        esc(t.email) +
+        '</span></td>',
+      '<td class="subject-cell">' + esc(t.subject) + '</td>',
+      '<td><span class="badge ' + sc + '">' + esc(t.status) + '</span></td>',
+      '<td style="font-size:12px;color:var(--ink3)">' +
+        (t.assignedTo
+          ? esc(t.assignedTo)
+          : '<span style="opacity:.4">Unassigned</span>') +
+        '</td>',
+      '<td class="date-cell">' + esc(t.createdAt) + '</td>'
+    ].join('');
+
+    tbody.appendChild(tr);
+  });
+}
+
+function openModal(t) {
+  currentTicket = t;
+  document.getElementById('modalSubject').textContent  = t.subject  || '—';
+  document.getElementById('modalTicketId').textContent = t.ticketID || '—';
+  document.getElementById('mStudentID').textContent    = t.studentID|| '—';
+  document.getElementById('mName').textContent         = t.name     || '—';
+  document.getElementById('mEmail').textContent        = t.email    || '—';
+  document.getElementById('mDate').textContent         = t.createdAt|| '—';
+  renderTicketAttachments(t);
+  document.getElementById('mStatus').value             = t.status   || 'Open';
+  document.getElementById('mAssignedTo').value         = t.assignedTo || '';
+  document.getElementById('mReply').value              = '';
+  document.getElementById('saveMsg').classList.remove('visible');
+  document.getElementById('saveErr').classList.remove('visible');
+  document.getElementById('saveBtn').disabled = false;
+  document.getElementById('saveSpinner').style.display = 'none';
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadAdminMessages(t.ticketID);
+}
+
+async function loadAdminMessages(ticketID) {
+  var container = document.getElementById('mMessages');
+  container.innerHTML = '<div style="text-align:center;font-size:13px;color:var(--ink3)"><span class="spinner-sm"></span></div>';
+  try {
+    var res = await apiRequest({ action: 'getMessages', ticketID: ticketID, email: currentTicket.email }, true);
+    var messages = res.messages || [];
+    if (!messages.length) {
+      container.innerHTML = '<div style="text-align:center;font-size:13px;color:var(--ink3);padding:12px 0">No messages yet.</div>';
+      return;
+    }
+    container.innerHTML = messages.map(function(m) {
+  var sender = (m.sender || '').toString().toLowerCase();
+var isStaff = sender === 'staff';
+  var label   = isStaff ? 'Secretariat · UM2IUC' : 'Student';
+  var rawDate = m.created_at || m.createdAt || m.timestamp || m.date || m.created;
+var d = new Date(rawDate);
+var time = isNaN(d.getTime())
+  ? 'Unknown time'
+  : d.toLocaleString('en-GB', {
+      day:'2-digit',
+      month:'short',
+      year:'numeric',
+      hour:'2-digit',
+      minute:'2-digit'
+    });
+      var bubbleStyle = isStaff
+        ? 'background:var(--ink);color:#fff;border-radius:12px 12px 2px 12px;padding:10px 14px;font-size:13px;line-height:1.6;display:inline-block;max-width:85%'
+        : 'background:var(--surface);border:1px solid var(--line);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;line-height:1.6;display:inline-block;max-width:85%';
+      var align = isStaff ? 'flex-end' : 'flex-start';
+      var attachmentHtml = renderAttachmentLinks(getAttachments(m));
+      return '<div style="display:flex;flex-direction:column;align-items:' + align + ';gap:3px">' +
+        '<div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);padding:0 2px">' + label + '</div>' +
+        '<div style="' + bubbleStyle + '">' + esc(m.content) + attachmentHtml + '</div>' +
+        '<div style="font-size:10px;color:var(--ink3);padding:0 2px">' + time + '</div>' +
+      '</div>';
+    }).join('');
+    container.scrollTop = container.scrollHeight;
+  } catch(err) {
+    container.innerHTML = '<div style="color:var(--crimson);font-size:13px">Failed to load messages.</div>';
+  }
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = ''; currentTicket = null;
+}
+
+function closeModalOnOverlay(e) {
+  if (e.target===document.getElementById('modalOverlay')) closeModal();
+}
+
+async function saveTicket() {
+  if (!currentTicket) return;
+  var btn     = document.getElementById('saveBtn');
+  var sp      = document.getElementById('saveSpinner');
+  var reply   = document.getElementById('mReply').value.trim();
+  var status  = document.getElementById('mStatus').value;
+  var assigned = document.getElementById('mAssignedTo').value.trim();
+  btn.disabled = true; sp.style.display = 'inline-block';
+  document.getElementById('saveMsg').classList.remove('visible');
+  document.getElementById('saveErr').classList.remove('visible');
+  try {
+    // Send reply message if typed
+    if (reply) {
+      await apiRequest({ action: 'sendMessage', ticketID: currentTicket.ticketID, email: currentTicket.email, content: reply, sender: 'staff' }, true);
+      document.getElementById('mReply').value = '';
+    }
+    // Update ticket settings
+    await apiRequest({ action:'updateTicket', ticketID:currentTicket.ticketID, status:status, assignedTo:assigned, replyMessage:reply }, true);
+    document.getElementById('saveMsg').classList.add('visible');
+    var idx = allTickets.findIndex(function(t){return t.ticketID===currentTicket.ticketID});
+    if (idx!==-1) { allTickets[idx].status=status; allTickets[idx].assignedTo=assigned; }
+    updateStats(); renderTable();
+setTimeout(function(){ closeModal(); }, 800);
+    // Reload messages
+    await loadAdminMessages(currentTicket.ticketID);
+  } catch(err) {
+    var errEl = document.getElementById('saveErr');
+    errEl.textContent = 'Error: ' + err.message; errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false; sp.style.display = 'none';
+  }
+}
+
+
+function handleTimeFilterChange() {
+  var value = document.getElementById('timeFilter').value;
+  var showCustom = value === 'custom';
+  document.getElementById('dateFrom').style.display = showCustom ? 'inline-block' : 'none';
+  document.getElementById('dateTo').style.display   = showCustom ? 'inline-block' : 'none';
+  renderTable();
+}
+
+function matchesSubmittedTime(ticket) {
+  var filter = document.getElementById('timeFilter') ? document.getElementById('timeFilter').value : 'all';
+  if (filter === 'all') return true;
+  var d = parseTicketDate(ticket.createdAt || ticket.created_at || ticket.submittedAt || ticket.date);
+  if (!d) return false;
+  var now = new Date();
+  var start, end;
+  if (filter === 'today') {
+    start = startOfDay(now); end = endOfDay(now);
+  } else if (filter === 'yesterday') {
+    var y = new Date(now); y.setDate(y.getDate() - 1);
+    start = startOfDay(y); end = endOfDay(y);
+  } else if (filter === '7d') {
+    start = new Date(now); start.setDate(start.getDate() - 7); end = now;
+  } else if (filter === '30d') {
+    start = new Date(now); start.setDate(start.getDate() - 30); end = now;
+  } else if (filter === 'custom') {
+    var from = document.getElementById('dateFrom').value;
+    var to   = document.getElementById('dateTo').value;
+    start = from ? startOfDay(new Date(from + 'T00:00:00')) : null;
+    end   = to ? endOfDay(new Date(to + 'T00:00:00')) : null;
+  }
+  if (start && d < start) return false;
+  if (end && d > end) return false;
+  return true;
+}
+
+function startOfDay(date) { var d = new Date(date); d.setHours(0,0,0,0); return d; }
+function endOfDay(date) { var d = new Date(date); d.setHours(23,59,59,999); return d; }
+
+function parseTicketDate(value) {
+  if (!value) return null;
+  var direct = new Date(value);
+  if (!isNaN(direct.getTime())) return direct;
+  var m = String(value).match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})(?:,?\s+(\d{1,2}):(\d{2}))?/);
+  if (m) {
+    var months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    var mon = months[m[2].slice(0,3).toLowerCase()];
+    if (mon !== undefined) return new Date(+m[3], mon, +m[1], +(m[4]||0), +(m[5]||0));
+  }
+  return null;
+}
+
+function getAttachments(obj) {
+  if (!obj) return [];
+  var raw = obj.attachments || obj.files || obj.uploads || obj.attachment || [];
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(raw); } catch(e) { raw = raw ? [{ url: raw, name: 'Attachment' }] : []; }
+  }
+  if (!Array.isArray(raw)) raw = [raw];
+  return raw.filter(Boolean);
+}
+
+function renderTicketAttachments(ticket) {
+  var files = getAttachments(ticket);
+  var panel = document.getElementById('mAttachmentsPanel');
+  var box = document.getElementById('mAttachments');
+  if (!files.length) { panel.style.display = 'none'; box.innerHTML = ''; return; }
+  panel.style.display = 'block';
+  box.innerHTML = renderAttachmentLinks(files);
+}
+
+function renderAttachmentLinks(files) {
+  if (!files || !files.length) return '';
+  return files.map(function(f, i){
+    var name = esc(f.name || f.filename || ('Attachment ' + (i + 1)));
+    var href = esc(f.url || f.dataUrl || f.publicUrl || f.path || '#');
+    var download = esc(f.name || f.filename || 'attachment');
+    return '<a class="attachment-link" href="' + href + '" target="_blank" rel="noopener" download="' + download + '">📎 ' + name + '</a>';
+  }).join('');
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+<footer style="
+  text-align:center;
+  padding:18px 12px;
+  font-size:12px;
+  color:#7A8599;
+  border-top:1px solid #E8EBF0;
+  margin-top:auto;
+  background:#fff;
+">
+  Developed by UM2IUC · © 2026 All Rights Reserved
+</footer>
+
+</body>
+</html>
