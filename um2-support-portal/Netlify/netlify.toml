@@ -1,4 +1,0 @@
-[build]
-base = "um2-support-portal"
-publish = "."
-functions = "netlify/functions"

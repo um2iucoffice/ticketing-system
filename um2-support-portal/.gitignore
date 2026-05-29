@@ -1,0 +1,10 @@
+# UM2 Support Portal — .gitignore
+# ─────────────────────────────────
+# Secrets — NEVER commit these
+js/config.js
+
+# System / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+*.log

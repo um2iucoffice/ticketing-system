@@ -1,14 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// config.js  —  UM2 Support Portal · Environment Configuration
+// config.example.js  —  UM2 Support Portal · Configuration Template
 //
-// ⚠️  IMPORTANT: This file contains secrets.
-//     Add  js/config.js  to your .gitignore — NEVER commit this file.
-//     A safe  js/config.example.js  template is provided for your repository.
+// Copy this file to  js/config.js  and fill in your real values.
+// js/config.js  is listed in  .gitignore  and must never be committed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-var SUPABASE_URL   = "https://nbjbievinjirlbyjodcm.supabase.co";
-var SUPABASE_ANON_KEY = "sb_publishable_8rac3A-dDNnQtOm0QL4E0w_pza6kBVP";
-var TICKET_API_URL = "https://nbjbievinjirlbyjodcm.supabase.co/functions/v1/swift-endpoint";
+var SUPABASE_URL      = "https://YOUR_PROJECT_ID.supabase.co";
+var SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+var TICKET_API_URL    = "https://YOUR_PROJECT_ID.supabase.co/functions/v1/swift-endpoint";
 
 // Staff portal only — validated server-side by your Edge Function.
-var ADMIN_TOKEN    = "UM2staff2025!";
+var ADMIN_TOKEN       = "YOUR_ADMIN_TOKEN";

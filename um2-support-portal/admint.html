@@ -359,15 +359,9 @@ td.date-cell{font-size:11px;color:var(--ink3);white-space:nowrap}
   </div>
 </div>
 
+<script src="js/config.js"></script>
 <script>
-// ── CONFIG ── update SUPABASE_ANON_KEY only ───────────────────
-var SUPABASE_URL      = "https://nbjbievinjirlbyjodcm.supabase.co";
-var SUPABASE_ANON_KEY = "sb_publishable_8rac3A-dDNnQtOm0QL4E0w_pza6kBVP";
-var TICKET_API_URL    = "https://nbjbievinjirlbyjodcm.supabase.co/functions/v1/swift-endpoint";
-// Admin token is sent in the x-admin-token header for API calls that require it.
-// This value is validated server-side by your Edge Function.
-var ADMIN_TOKEN       = "UM2staff2025!";
-// ─────────────────────────────────────────────────────────────
+// CONFIG is loaded from js/config.js (excluded from Git via .gitignore)
 
 var sbClient      = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 var currentFilter = 'All';
